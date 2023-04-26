@@ -51,17 +51,18 @@ def load_history(results, user_type):
     for m in matches:
         if m['metadata']['user'] == user_type:
             data = list()
-            date = m['metadata']['time'].strftime("%m/%d/%Y, %H:%M:%S")
-            data.append("Time: " + date)
-            data.append("User: " + m['metadata']['user'])
+            # date = m['metadata']['time'].strftime("%m/%d/%Y, %H:%M:%S")
+            # data.append("Time: " + date)
+            data.append("Speaker: " + m['metadata']['user'])
             data.append("Message: " + m['metadata']['message'])
             data = '\n'.join(data)
             result_data.append(data)
-    message_block = '\n'.join(result_data).strip()
+    data_without_duplicates = list(set(result_data))
+    message_block = '\n'.join(data_without_duplicates).strip()
     return message_block
 
 
-conversation_history = []
+current_conversation_history = []
 
 # The main loop for the chatbot
 while True:
@@ -69,15 +70,15 @@ while True:
 
     # Getting user input, time and vectorizing them for the index
     chat_input = input("You: ")
-    conversation_history.append({"role": "user", "content": chat_input})
-    date_time = datetime.now()
-    user_date_time = date_time.now().strftime("%m/%d/%Y, %H:%M:%S")
+    current_conversation_history.append({"role": "user", "content": chat_input})
+    # date_time = datetime.now()
+    # user_date_time = date_time.now().strftime("%m/%d/%Y, %H:%M:%S")
     metadata = {
-        'time': user_date_time,
+        # 'time': user_date_time,
         'user': 'USER',
         'message': chat_input,
     }
-    user_message = '%s: %s - %s' % ('USER', user_date_time, chat_input)
+    user_message = '%s: %s' % ('USER', chat_input) # removed user_date_time
     user_message_vector = gpt_embedding(user_message)
     identity = str(uuid4())
     payload.append((identity, user_message_vector, metadata))
@@ -85,12 +86,21 @@ while True:
     # Getting relevant previous messages from index
     # top_k sets how many results will be returned
     index_history = index.query(vector=user_message_vector, top_k=100, include_values=False, include_metadata=True)
-    user_history = load_history(index_history, 'user')
+    user_history = load_history(index_history, 'USER')
     agent_history = load_history(index_history, 'EVE')
-    prompt = open_file('prompt_config').replace('<<USER>>', user_history).replace('<<EVE>>', agent_history)
+
+    # History can be too long to pass to LLM
+    # Implement a mechanism that cycles through messages
+    # Pass instruction prompt + users question + batch of messages
+
+    # Get LLMs decision if provided information is enough to make
+    prompt = open_file('prompt_config')\
+        .replace('<<USER>>', user_history)\
+        .replace('<<EVE>>', agent_history)\
+        .replace('<<CURRENT>>', chat_input)
 
     # Preparing prompt structure for API
-    messages = conversation_history.copy()
+    messages = current_conversation_history.copy()
     messages.insert(0, {"role": "system", "content": prompt})
 
     # Making API call to OpenAI with the prompt
@@ -98,6 +108,7 @@ while True:
         model="gpt-3.5-turbo",
         messages=messages,
         stream=True,
+        temperature=0
     )
 
     full_response = ""
@@ -115,22 +126,22 @@ while True:
     print()
 
     # Saving response to index
-    date_time = datetime.now()
-    agent_date_time = date_time.strftime("%m/%d/%Y, %H:%M:%S")
+    # date_time = datetime.now()
+    # agent_date_time = date_time.strftime("%m/%d/%Y, %H:%M:%S")
     agent_metadata = {
-        'time': agent_date_time,
+        # 'time': agent_date_time,
         'user': 'EVE',
         'message': full_response,
     }
-    agent_message = '%s: %s - %s' % ('EVE', agent_date_time, full_response)
+    agent_message = '%s: %s' % ('EVE', full_response)  # removed agent_date_time
     agent_message_vector = gpt_embedding(agent_message)
     identity = str(uuid4())
     payload.append((identity, agent_message_vector, agent_metadata))
 
     # Adding response to current conversation history
-    conversation_history.append({"role": "assistant", "content": full_response})
+    current_conversation_history.append({"role": "assistant", "content": full_response})
     messages.append({"role": "assistant", "content": full_response})
-    save_json('logs/%s.json' % time.time(), messages)
+    save_json('logs/%s.json' % int(time.time()), messages)
 
     # Uploading new data to index
     index.upsert(payload)
