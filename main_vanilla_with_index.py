@@ -1,58 +1,26 @@
 import sys
-import json
 import openai
 import pinecone
-import tiktoken
 import time
-from datetime import datetime
-from pathlib import Path
+import os
+import common
+from dotenv import load_dotenv
 from uuid import uuid4
 
-openai.api_key = "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"
-pinecone.init(api_key="a433ce32-e7cb-4684-9280-1d201daccc85", environment="eu-west1-gcp")
+import process_index
+
+load_dotenv()
+openai.api_key = os.getenv('KEY_OPEN_AI')
+pinecone.init(api_key=os.getenv('KEY_PINECONE'), environment=os.getenv('ENV_PINECONE'))
 index = pinecone.Index("virtual-agent-v0")
 
 
-def count_tokens(text):
-    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-    return len(encoding.encode(text))
-
-
-def gpt_embedding(content, engine='text-embedding-ada-002'):
-    content = content.encode(encoding='ASCII', errors='ignore').decode()
-    res = openai.Embedding.create(input=content, engine=engine)
-    vector = res['data'][0]['embedding']
-    return vector
-
-
-def open_file(filepath):
-    with open(filepath, 'r', encoding='utf-8') as infile:
-        return infile.read()
-
-
-def save_file(filepath, content):
-    with open(filepath, 'w', encoding='utf-8') as outfile:
-        outfile.write(content)
-
-
-def load_json(filepath):
-    with open(filepath, 'r', encoding='utf-8') as infile:
-        return json.load(infile)
-
-
-def save_json(filepath, content):
-    with open(filepath, 'w', encoding='utf-8') as outfile:
-        json.dump(content, outfile, ensure_ascii=False, sort_keys=True, indent=2)
-
-
-def load_history(results, user_type):
+def load_history_old(results, user_type):
     matches = [result for result in results['matches']]
     result_data = list()
     for m in matches:
         if m['metadata']['user'] == user_type:
             data = list()
-            # date = m['metadata']['time'].strftime("%m/%d/%Y, %H:%M:%S")
-            # data.append("Time: " + date)
             data.append("Speaker: " + m['metadata']['user'])
             data.append("Message: " + m['metadata']['message'])
             data = '\n'.join(data)
@@ -62,39 +30,41 @@ def load_history(results, user_type):
     return message_block
 
 
-current_conversation_history = []
+# Main
 
-# The main loop for the chatbot
+current_conversation_history = []
 while True:
     payload = list()
 
-    # Getting user input, time and vectorizing them for the index
+    # Getting user input, adding to local history
     chat_input = input("You: ")
     current_conversation_history.append({"role": "user", "content": chat_input})
-    # date_time = datetime.now()
-    # user_date_time = date_time.now().strftime("%m/%d/%Y, %H:%M:%S")
+
+    # Format for index
+    identity = str(uuid4())
+    user_message_vector = common.gpt_embedding(chat_input)
     metadata = {
-        # 'time': user_date_time,
         'user': 'USER',
         'message': chat_input,
     }
-    user_message = '%s: %s' % ('USER', chat_input) # removed user_date_time
-    user_message_vector = gpt_embedding(user_message)
-    identity = str(uuid4())
     payload.append((identity, user_message_vector, metadata))
 
     # Getting relevant previous messages from index
     # top_k sets how many results will be returned
     index_history = index.query(vector=user_message_vector, top_k=100, include_values=False, include_metadata=True)
-    user_history = load_history(index_history, 'USER')
-    agent_history = load_history(index_history, 'EVE')
+    user_history = process_index.load_history(index_history, 'USER')
+    agent_history = process_index.load_history(index_history, 'EVE')
 
+    # s = process_index.history_to_string(user_history)
+
+    processed_user_history = process_index.process_history(user_history)
     # History can be too long to pass to LLM
     # Implement a mechanism that cycles through messages
     # Pass instruction prompt + users question + batch of messages
+    # Process all batches
+    # Get answer?
 
-    # Get LLMs decision if provided information is enough to make
-    prompt = open_file('prompt_config')\
+    prompt = common.open_file('prompt-configs/vanilla_prompt_config')\
         .replace('<<USER>>', user_history)\
         .replace('<<EVE>>', agent_history)\
         .replace('<<CURRENT>>', chat_input)
@@ -111,37 +81,25 @@ while True:
         temperature=0
     )
 
-    full_response = ""
+    # Processing the response
     sys.stdout.write("Response: ")
-    # Process the response from the API and stream it
-    for chunk in response:
-        if "role" in chunk["choices"][0]["delta"]:
-            continue
+    full_response = common.get_response(response, True)
 
-        elif "content" in chunk["choices"][0]["delta"]:
-            r_text = chunk["choices"][0]["delta"]["content"]
-            full_response += r_text
-            sys.stdout.write(r_text)
-            sys.stdout.flush()
-    print()
+    # Adding response to local current conversation history
+    current_conversation_history.append({"role": "assistant", "content": full_response})
 
-    # Saving response to index
-    # date_time = datetime.now()
-    # agent_date_time = date_time.strftime("%m/%d/%Y, %H:%M:%S")
+    # Saving a local log of what API has received and what was the answer
+    messages.append({"role": "assistant", "content": full_response})
+    common.save_json('logs/%s.json' % int(time.time()), messages)
+
+    # Format for index
+    identity = str(uuid4())
+    agent_message_vector = common.gpt_embedding(full_response)
     agent_metadata = {
-        # 'time': agent_date_time,
         'user': 'EVE',
         'message': full_response,
     }
-    agent_message = '%s: %s' % ('EVE', full_response)  # removed agent_date_time
-    agent_message_vector = gpt_embedding(agent_message)
-    identity = str(uuid4())
     payload.append((identity, agent_message_vector, agent_metadata))
-
-    # Adding response to current conversation history
-    current_conversation_history.append({"role": "assistant", "content": full_response})
-    messages.append({"role": "assistant", "content": full_response})
-    save_json('logs/%s.json' % int(time.time()), messages)
 
     # Uploading new data to index
     index.upsert(payload)

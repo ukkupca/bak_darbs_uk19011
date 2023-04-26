@@ -11,7 +11,7 @@ from typing import Dict
 app = FastAPI()
 
 # Mount static files and templates because we are using Jinja2. Jinja2 is a templating engine for Python.
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Replace with your OpenAI API key
