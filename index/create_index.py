@@ -4,7 +4,7 @@ pinecone.init(api_key="a433ce32-e7cb-4684-9280-1d201daccc85", environment="eu-we
 
 # Use to create an index that would not index all metadata
 metadata_config = {
-    "indexed": ["user"]
+    "indexed": ["timestamp"]
 }
 print(f"Creating index..")
 index = pinecone.create_index(
