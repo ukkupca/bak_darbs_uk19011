@@ -77,6 +77,9 @@ def get_contents_as_string(batch):
 
 
 def process_history(history, task, user):
+    if not history['matches']:
+        return ""
+
     result = []
     duplicates_removed = remove_duplicates(history)
     batches = split_array(duplicates_removed)
@@ -102,7 +105,7 @@ def process_history(history, task, user):
             temperature=0
         )
         result.append(common.get_response(response))
-    return result
+    return '\n'.join(result)
 
 
 

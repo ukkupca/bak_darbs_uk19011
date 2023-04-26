@@ -6,9 +6,6 @@ import os
 import common
 import datetime
 from dotenv import load_dotenv
-from uuid import uuid4
-
-import process_index
 
 load_dotenv()
 openai.api_key = os.getenv('KEY_OPEN_AI')
@@ -16,18 +13,17 @@ pinecone.init(api_key=os.getenv('KEY_PINECONE'), environment=os.getenv('ENV_PINE
 index = pinecone.Index("virtual-agent-v0")
 
 
-def load_history_old(results, user_type):
+def load_history_old(results):
     matches = [result for result in results['matches']]
     result_data = list()
     for m in matches:
-        if m['metadata']['user'] == user_type:
-            data = list()
-            timestamp = m['metadata']['timestamp']
-            date_time = datetime.datetime.fromtimestamp(timestamp)
-            data.append("Time: " + date_time.strftime('%Y-%m-%d %H:%M:%S'))
-            data.append("Text: " + m['metadata']['content'])
-            data = '\n'.join(data)
-            result_data.append(data)
+        data = list()
+        timestamp = m['metadata']['timestamp']
+        date_time = datetime.datetime.fromtimestamp(int(timestamp))
+        data.append("Time: " + date_time.strftime('%Y-%m-%d %H:%M:%S'))
+        data.append("Text: " + m['metadata']['content'])
+        data = '\n'.join(data)
+        result_data.append(data)
     data_without_duplicates = list(set(result_data))
     message_block = '\n'.join(data_without_duplicates).strip()
     return message_block
@@ -37,67 +33,45 @@ def load_history_old(results, user_type):
 
 current_conversation_history = []
 while True:
-    payload = list()
-
+    user_payload = list()
+    agent_payload = list()
     # Getting user input, adding to local history
     chat_input = input("You: ")
     current_conversation_history.append({"role": "user", "content": chat_input})
 
     # Format for index
-    identity = str(uuid4())
+    identity = str(int(time.time()))
     user_message_vector = common.gpt_embedding(chat_input)
     metadata = {
-        'timestamp': int(time.time()),
-        'message': chat_input,
+        'timestamp': identity,
+        'content': chat_input,
     }
-    payload.append((identity, user_message_vector, metadata))
-
-    # Base conversation prompt
-    base_prompt = common.open_file('prompt-configs/default_system_config')
-
-    # Preparing prompt structure for API
-    messages = current_conversation_history.copy()
-    messages.insert(0, {"role": "system", "content": base_prompt})
-
-    # Making API call to OpenAI with the prompt
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        stream=True,
-        temperature=0
-    )
-
-    # give messages to agent, so it can decide whether the response is ok, or DB should be called
+    user_payload.append((identity, user_message_vector, metadata))
 
     # Getting relevant previous messages from index
     # top_k sets how many results will be returned
-    index_user_history = index.query(namespace='USER',
-                                     vector=user_message_vector,
-                                     top_k=100,
-                                     include_values=False,
-                                     include_metadata=True)
+    user_history = index.query(namespace='USER',
+                               vector=user_message_vector,
+                               top_k=40,
+                               include_values=False,
+                               include_metadata=True)
+    agent_history = index.query(namespace='AGENT',
+                                vector=user_message_vector,
+                                top_k=10,
+                                include_values=False,
+                                include_metadata=True)
 
-    agent_user_history = index.query(namespace='AGENT',
-                                     vector=user_message_vector,
-                                     top_k=100,
-                                     include_values=False,
-                                     include_metadata=True)
+    loaded_user_history = load_history_old(user_history)
+    loaded_agent_history = load_history_old(user_history)
 
-    user_history = process_index.load_user_type_history(index_user_history, 'USER')
-    agent_history = process_index.load_user_type_history(agent_user_history, 'AGENT')
-
-    user_history_task = ""
-    processed_user_history = process_index.process_history(user_history, user_history_task, 'USER')
-    agent_history_task = ""
-    processed_agent_history = process_index.process_history(agent_history, agent_history_task, 'AGENT')
-
-
-    prompt = common.open_file('prompt-configs/default_system_config')\
-        .replace('<<USER>>', user_history)\
-        .replace('<<EVE>>', agent_history)\
+    prompt = common.open_file('prompt-configs/default_system_config') \
+        .replace('<<USER>>', loaded_user_history) \
+        .replace('<<AGENT>>', loaded_agent_history) \
         .replace('<<CURRENT>>', chat_input)
 
-
+    # Preparing prompt structure for API
+    messages = current_conversation_history.copy()
+    messages.insert(0, {"role": "system", "content": prompt})
 
     # Making API call to OpenAI with the prompt
     response = openai.ChatCompletion.create(
@@ -108,7 +82,7 @@ while True:
     )
 
     # Processing the response
-    sys.stdout.write("Response: ")
+    sys.stdout.write("Eve: ")
     full_response = common.get_response(response, True)
 
     # Adding response to local current conversation history
@@ -119,13 +93,14 @@ while True:
     common.save_json('logs/%s.json' % int(time.time()), messages)
 
     # Format for index
-    identity = str(uuid4())
+    identity = str(int(time.time()))
     agent_message_vector = common.gpt_embedding(full_response)
     agent_metadata = {
-        'user': 'EVE',
+        'timestamp': identity,
         'content': full_response,
     }
-    payload.append((identity, agent_message_vector, agent_metadata))
+    agent_payload.append((identity, agent_message_vector, agent_metadata))
 
     # Uploading new data to index
-    index.upsert(payload)
+    index.upsert(user_payload, "USER")
+    index.upsert(agent_payload, "AGENT")
