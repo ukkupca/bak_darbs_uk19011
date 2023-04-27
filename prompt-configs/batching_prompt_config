@@ -1,5 +1,2 @@
-Task:
-<<TASK>>
-
-Messages from the <<USER_TYPE>> in chat history that contain :
+Messages from the <<USER_TYPE>> in chat history:
 <<HISTORY>>

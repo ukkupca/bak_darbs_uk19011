@@ -27,11 +27,13 @@ def history_to_string(history):
 
 def remove_duplicates(array):
     unique_data = []
+    result = []
     for item in array:
         content = strip_until_content(item['content'])
         if content not in unique_data:
-            unique_data.append(item)
-    return unique_data
+            unique_data.append(item['content'])
+            result.append(item)
+    return result
 
 
 def strip_until_content(text):
@@ -76,26 +78,28 @@ def get_contents_as_string(batch):
     return '\n'.join(contents)
 
 
-def process_history(history, task, user):
+def process_history(history, query, user):
     if not history['matches']:
         return ""
 
     result = []
-    duplicates_removed = remove_duplicates(history)
+    metadata = [m['metadata'] for m in history['matches']]
+    duplicates_removed = remove_duplicates(metadata)
     batches = split_array(duplicates_removed)
-    # TODO: write system prompt
-    system_prompt = common.open_file('prompt-configs/batching_system_config')
+    system_prompt = common.open_file('prompt-configs/batching_system_config')\
+        .replace('<<USER_TYPE>>', user)\
+        .replace('<<QUERY>>', query)
     system_message = {
         "role": "system",
         "content": system_prompt
     }
     prompt = common.open_file('prompt-configs/batching_prompt_config')\
-        .replace('<<USER_TYPE>>', user)\
-        .replace('<<TASK>>', task)
+        .replace('<<USER_TYPE>>', user)
+    role = get_role(user)
     for b in batches:
-        batch_prompt = prompt.replace('<<HISTORY>>', b.get_contents_as_string())
+        batch_prompt = prompt.replace('<<HISTORY>>', get_contents_as_string(b))
         user_message = {
-            "role": "user",
+            "role": role,
             "content": batch_prompt
         }
         response = openai.ChatCompletion.create(
@@ -106,6 +110,14 @@ def process_history(history, task, user):
         )
         result.append(common.get_response(response))
     return '\n'.join(result)
+
+
+def get_role(user):
+    if user == 'USER':
+        role = 'user'
+    else:
+        role = 'assistant'
+    return role
 
 
 

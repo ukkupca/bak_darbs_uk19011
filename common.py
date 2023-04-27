@@ -51,3 +51,13 @@ def get_response(response, stream=False):
                 sys.stdout.flush()
     print()
     return full_response
+
+
+def history_to_string(array):
+    result = ""
+    for item in array:
+        role = item["role"]
+        content = item["content"]
+        result += f"{role}: {content}\n"
+    return result
+

@@ -14,7 +14,7 @@ def count_tokens(text):
 MAX_MEMORY_TOKENS = 100
 
 # Initialize the conversation_history list
-# TODO: Add instruction prompt
+# NOTNOW_TODO: Add instruction prompt
 conversation_history = [
     {"role": "system", "content": "You are a helpful assistant."}
 ]

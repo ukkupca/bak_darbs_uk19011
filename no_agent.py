@@ -64,7 +64,8 @@ while True:
     loaded_user_history = load_history_old(user_history)
     loaded_agent_history = load_history_old(user_history)
 
-    prompt = common.open_file('prompt-configs/default_system_config') \
+    # TODO: Add that chatbot should use emojis
+    prompt = common.open_file('prompt-configs/vanilla_system_config') \
         .replace('<<USER>>', loaded_user_history) \
         .replace('<<AGENT>>', loaded_agent_history) \
         .replace('<<CURRENT>>', chat_input)
@@ -86,10 +87,10 @@ while True:
     full_response = common.get_response(response, True)
 
     # Adding response to local current conversation history
-    current_conversation_history.append({"role": "assistant", "content": full_response})
+    current_conversation_history.append({"role": "eve", "content": full_response})
 
     # Saving a local log of what API has received and what was the answer
-    messages.append({"role": "assistant", "content": full_response})
+    messages.append({"role": "eve", "content": full_response})
     common.save_json('logs/%s.json' % int(time.time()), messages)
 
     # Format for index
