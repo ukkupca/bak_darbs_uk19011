@@ -60,13 +60,13 @@ class AnswerUser(BaseTool):
         index_service.prepare_and_add(query, agent_payload)
         sys.stdout.write("\nEve: %s" % query)
         print()  # Newline
-        new_agent_message = 'eve: %s \n<<end_of_messages>>\n' % query
+        new_agent_message = 'eve: %s \n<<end_of_previous_messages>>\n' % query
         agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
             .replace('<<end_of_messages>>', new_agent_message)
         index_service.prepare_and_add(query, agent_payload)
         e.index.upsert(agent_payload, 'AGENT')
         user_input = input("You: ")
-        new_user_message = 'user: %s \n<<end_of_messages>>\n' % user_input
+        new_user_message = 'user: %s \n<<end_of_previous_messages>>\n' % user_input
         agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
             .replace('<<end_of_messages>>', new_user_message)
         index_service.prepare_and_add(user_input, user_payload)
@@ -85,7 +85,7 @@ llm = ChatOpenAI(
     openai_api_key=e.openai_api_key
 )
 
-tools = [AnswerUser(), tools.SearchUserHistory(), tools.SearchEveHistory()]
+tools = [AnswerUser(), tools.SearchUserHistory(), tools.SearchYourPastMessages()]
 tool_names = [tool.name for tool in tools]
 
 prompt = CustomPromptTemplate(
@@ -106,14 +106,6 @@ agent = LLMSingleActionAgent(
 )
 agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
-while True:
-    # Getting initial user input, adding to local history and prepping index payload
-    user = input("You: ")
-    new_user_message = 'user: %s \n<<end_of_messages>>\n' % user
-    agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
-        .replace('<<end_of_messages>>', new_user_message)
-    try:
-        agent_executor.run(user)
-    except Exception as e:
-        sys.stdout.write("System error, restoring connection...")
-
+# Getting initial user input, adding to local history and prepping index payload
+user = input("You: ")
+agent_executor.run(user)

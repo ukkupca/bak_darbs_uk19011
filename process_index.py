@@ -10,7 +10,7 @@ def load_user_type_history(results, user_type):
     history = []
     for m in results['matches']:
         timestamp = m['metadata']['timestamp']
-        date_time = datetime.datetime.fromtimestamp(timestamp)
+        date_time = datetime.datetime.fromtimestamp(int(timestamp))
         content = 'Time: %s Content: %s' % (date_time.strftime('%Y-%m-%d %H:%M:%S'), m['metadata']['message'])
         history.append(
             {
@@ -74,7 +74,9 @@ def split_array(array, limit=BATCH_MEMORY_TOKENS, current_batch=None, result=Non
 def get_contents_as_string(batch):
     contents = []
     for b in batch:
-        contents.append(b['content'])
+        timestamp = b['timestamp']
+        date_time = datetime.datetime.fromtimestamp(int(timestamp))
+        contents.append('On %s: %s' % (date_time, b['content']))
     return '\n'.join(contents)
 
 
@@ -86,16 +88,17 @@ def process_history(history, query, user):
     metadata = [m['metadata'] for m in history['matches']]
     duplicates_removed = remove_duplicates(metadata)
     batches = split_array(duplicates_removed)
-    system_prompt = common.open_file('prompt-configs/batching_system_config')\
+    system_prompt = get_system_prompt(user)\
         .replace('<<USER_TYPE>>', user)\
         .replace('<<QUERY>>', query)
     system_message = {
         "role": "system",
         "content": system_prompt
     }
-    prompt = common.open_file('prompt-configs/batching_prompt_config')\
-        .replace('<<USER_TYPE>>', user)
+
+    prompt = common.open_file('prompt-configs/batching_prompt_config')
     role = get_role(user)
+
     for b in batches:
         batch_prompt = prompt.replace('<<HISTORY>>', get_contents_as_string(b))
         user_message = {
@@ -110,6 +113,14 @@ def process_history(history, query, user):
         )
         result.append(common.get_response(response))
     return '\n'.join(result)
+
+
+def get_system_prompt(user):
+    if user == 'USER':
+        prompt = common.open_file('prompt-configs/batching_prompt_config')
+    else:
+        prompt = common.open_file('prompt-configs/agent_batching_system_config')
+    return prompt
 
 
 def get_role(user):

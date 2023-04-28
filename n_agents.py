@@ -67,13 +67,6 @@ class CustomOutputParser(AgentOutputParser):
 tools = [tools.SearchUserHistory(), tools.SearchAgentHistory()]
 tool_names = [tool.name for tool in tools]
 output_parser = CustomOutputParser()
-base_prompt = CustomPromptTemplate(
-    template=common.open_file('prompt-configs/base_agent_config'),
-    tools=tools,
-    # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
-    # This includes the `intermediate_steps` variable because that is needed
-    input_variables=["input", "intermediate_steps"]
-)
 llm = ChatOpenAI(
     model="gpt-3.5-turbo",
     temperature=0,
@@ -86,13 +79,19 @@ while True:
 
     # Getting user input, adding to local history and prepping index payload
     chat_input = input("You: ")
-    index_service.prepare_payload(chat_input, user_payload)
+    index_service.prepare_and_add(chat_input, user_payload)
 
-    current_prompt = base_prompt
-    current_prompt.insert_history(current_conversation_history)
+    base_prompt = CustomPromptTemplate(
+        template=common.open_file('prompt-configs/base_agent_config'),
+        tools=tools,
+        # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
+        # This includes the `intermediate_steps` variable because that is needed
+        input_variables=["input", "intermediate_steps"]
+    )
+    base_prompt.insert_history(current_conversation_history)
 
     # LLM chain consisting of the LLM and a prompt
-    llm_chain = LLMChain(llm=llm, prompt=current_prompt)
+    llm_chain = LLMChain(llm=llm, prompt=base_prompt)
     agent = LLMSingleActionAgent(
         llm_chain=llm_chain,
         output_parser=output_parser,
@@ -109,7 +108,7 @@ while True:
     current_conversation_history.append({"role": "User input", "content": chat_input})
     current_conversation_history.append({"role": "Your answer", "content": agent_output})
 
-    index_service.prepare_payload(agent_output, agent_payload)
+    index_service.prepare_and_add(agent_output, agent_payload)
 
     e.index.upsert(user_payload, "USER")
     e.index.upsert(agent_payload, "AGENT")
