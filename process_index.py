@@ -2,6 +2,8 @@ import common
 import datetime
 import openai
 
+import env_loader
+
 MAX_MEMORY_TOKENS = 4097
 BATCH_MEMORY_TOKENS = 4000
 
@@ -19,10 +21,6 @@ def load_user_type_history(results, user_type):
             }
         )
     return history
-
-
-def history_to_string(history):
-    return '\n'.join(history).strip()  # not correct
 
 
 def remove_duplicates(array):
@@ -106,7 +104,7 @@ def process_history(history, query, user):
             "content": batch_prompt
         }
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model=env_loader.openai_model,
             messages=[system_message, user_message],
             stream=True,
             temperature=0
@@ -117,7 +115,7 @@ def process_history(history, query, user):
 
 def get_system_prompt(user):
     if user == 'USER':
-        prompt = common.open_file('prompt-configs/batching_prompt_config')
+        prompt = common.open_file('prompt-configs/batching_system_config')
     else:
         prompt = common.open_file('prompt-configs/agent_batching_system_config')
     return prompt

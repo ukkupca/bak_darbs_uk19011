@@ -15,11 +15,13 @@ You have access to the following tools:
 
 Use the following format:
 """
-Thought: [your private thoughts on what action to do next and why]
+Context: [What is the context]
+Database: [Could database contain more information on the context]
+Task: [define a task on what you should do next based on context and database]
 Action: name of the tool from [{tool_names}] list -- always pick one tool to take action
 Action Input: the input to the action
 Observation: the result of the action
-... (this Thought/Action/Action Input/Observation can repeat N times)
+... (this Context/Task/Action/Action Input/Observation can repeat N times)
 """
 
 User does not see the observation result from tools, actions, action inputs or thoughts, only you do. User only sees what you input to the tool AnswerUser. If you use information from past conversations to answer the user use sentences similar "I remember you told me ..".

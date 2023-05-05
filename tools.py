@@ -4,12 +4,11 @@ import process_index
 import env_loader as e
 
 
-class SearchUserHistory(BaseTool):
-    name = "SearchUserHistory"
-    description = "Pass query of separate keywords to find information that you know in database about the user. " \
+class SearchUserDatabase(BaseTool):
+    name = "SearchUserDatabase"
+    description = "Pass query of separate keywords to find information in database about the user. " \
                   "Format: keyword, keyword, ..., keyword" \
-                  "Information may not be relevant to what you needed. Try again with more specific keywords or " \
-                  "assume that user has not talked about the topic previously"
+                  "Summarized information on what user has said in past conversations will be returned if available."
 
     def _run(self, query: str) -> str:
         index_user_history = e.index.query(namespace='USER',
@@ -21,16 +20,17 @@ class SearchUserHistory(BaseTool):
 
     async def _arun(self, query: str) -> str:
         """Use the tool asynchronously."""
-        raise NotImplementedError("SearchUserHistory does not support async")
+        raise NotImplementedError("SearchUserDatabase does not support async")
 
 
-class SearchEveHistory(BaseTool):
-    name = "SearchEveHistory"
-    description = "Pass query of important separate keywords to find information on what Eve has said in past " \
-                  "messages. " \
+class SearchAgentDatabase(BaseTool):
+    name = "SearchAgentDatabase"
+    description = "Pass query of important separate keywords to find information on what " \
+                  "assistant Eve has said in past messages. " \
                   "Format: keyword, keyword, ..., keyword" \
-                  "Information may not be relevant to needed information. Try again with more specific keywords or " \
-                  "assume that you have not said anything about the topic previously"
+                  "Summarized information on what assistant Eve has said in past conversations will " \
+                  "be returned if available. If returned information is not helpful, try again " \
+                  "with different keywords or assume that assistant Eve has not talked about the topic previously"
 
     def _run(self, query: str) -> str:
         index_user_history = e.index.query(namespace='AGENT',
@@ -42,6 +42,4 @@ class SearchEveHistory(BaseTool):
 
     async def _arun(self, query: str) -> str:
         """Use the tool asynchronously."""
-        raise NotImplementedError("SearchYourPastMessages does not support async")
-
-
+        raise NotImplementedError("SearchAgentDatabase does not support async")

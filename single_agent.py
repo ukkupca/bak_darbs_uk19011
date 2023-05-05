@@ -8,6 +8,7 @@ from langchain.schema import AgentAction, AgentFinish, HumanMessage
 import re
 from langchain.tools import BaseTool
 import common
+import env_loader
 import tools
 import env_loader as e
 from index import index_service
@@ -19,7 +20,7 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
     # The list of tools available
     tools: List[BaseTool]
 
-    def format_messages(self, **kwargs) -> list[HumanMessage]:
+    def format_messages(self, **kwargs) -> List[HumanMessage]:
         # Get the intermediate steps (AgentAction, Observation tuples)
         # Format them in a particular way
         intermediate_steps = kwargs.pop("intermediate_steps")
@@ -52,7 +53,7 @@ class CustomOutputParser(AgentOutputParser):
 
 class AnswerUser(BaseTool):
     name = "AnswerUser"
-    description = "Pass your answer to the user when you have an answer ready, receive users response"
+    description = "Pass your answer to the user when you have an answer ready. Receive users response."
 
     def _run(self, query: str) -> str:
         user_payload = list()
@@ -80,12 +81,12 @@ class AnswerUser(BaseTool):
 
 output_parser = CustomOutputParser()
 llm = ChatOpenAI(
-    model="gpt-3.5-turbo",
+    model=env_loader.openai_model,
     temperature=0,
     openai_api_key=e.openai_api_key
 )
 
-tools = [AnswerUser(), tools.SearchUserHistory(), tools.SearchEveHistory()]
+tools = [AnswerUser(), tools.SearchUserDatabase(), tools.SearchAgentDatabase()]
 tool_names = [tool.name for tool in tools]
 
 prompt = CustomPromptTemplate(
@@ -109,11 +110,13 @@ agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, ve
 while True:
     # Getting initial user input, adding to local history and prepping index payload
     user = input("You: ")
-    new_user_message = 'user: %s \n<<end_of_messages>>\n' % user
+    initial_user_message = 'user: %s \n<<end_of_messages>>\n' % user
     agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
-        .replace('<<end_of_messages>>', new_user_message)
-    try:
-        agent_executor.run(user)
-    except Exception as e:
-        sys.stdout.write("System error, restoring connection...")
+        .replace('<<end_of_messages>>', initial_user_message)
+    for n in range(5):
+        try:
+            agent_executor.run(user)
+        except ValueError as error:
+            sys.stdout.write(str(error))
+            sys.stdout.write("System error, restoring connection...")
 
