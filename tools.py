@@ -5,8 +5,9 @@ import env_loader as e
 
 
 class SearchUserDatabase(BaseTool):
-    name = "SearchUserDatabase"
-    description = "Pass query of separate keywords to find information in database about the user. " \
+    name = "SearchUserPastMessages"
+    description = "Pass query of separate keywords to find information in database " \
+                  "on what user has shared in the past. " \
                   "Format: keyword, keyword, ..., keyword" \
                   "Summarized information on what user has said in past conversations will be returned if available."
 
@@ -23,14 +24,13 @@ class SearchUserDatabase(BaseTool):
         raise NotImplementedError("SearchUserDatabase does not support async")
 
 
-class SearchAgentDatabase(BaseTool):
-    name = "SearchAgentDatabase"
-    description = "Pass query of important separate keywords to find information on what " \
+class SearchChatbotDatabase(BaseTool):
+    name = "SearchChatbotPastMessages"
+    description = "Pass query of separate keywords to find information on what " \
                   "assistant Eve has said in past messages. " \
                   "Format: keyword, keyword, ..., keyword" \
-                  "Summarized information on what assistant Eve has said in past conversations will " \
-                  "be returned if available. If returned information is not helpful, try again " \
-                  "with different keywords or assume that assistant Eve has not talked about the topic previously"
+                  "Summarized information on what chatbot Eve has said in past conversations will " \
+                  "be returned if available."
 
     def _run(self, query: str) -> str:
         index_user_history = e.index.query(namespace='AGENT',
@@ -42,4 +42,4 @@ class SearchAgentDatabase(BaseTool):
 
     async def _arun(self, query: str) -> str:
         """Use the tool asynchronously."""
-        raise NotImplementedError("SearchAgentDatabase does not support async")
+        raise NotImplementedError("SearchChatbotDatabase does not support async")

@@ -53,7 +53,15 @@ class CustomOutputParser(AgentOutputParser):
 
 class AnswerUser(BaseTool):
     name = "AnswerUser"
-    description = "Pass your answer to the user when you have an answer ready. Receive users response."
+    # description = "Pass your answer to the user when you have an answer ready. Receive users response."
+    description = "Pass your answer to the user when you have an answer ready. Receive users response." \
+                  "Remember that you want to be a close friend to the user. Be funny and kind. The conversation must " \
+                  "flow " \
+                  "naturally, share your own thoughts and opinions, ask questions and encourage user to talk about " \
+                  "themselves. This will make the conversation more engaging and enjoyable for the user." \
+                  "Talk about one topic at a time. Only the user can end a conversation with you. When one " \
+                  "conversation comes to a natural end figure out a new topic you could talk about." \
+                  ""
 
     def _run(self, query: str) -> str:
         user_payload = list()
@@ -86,11 +94,11 @@ llm = ChatOpenAI(
     openai_api_key=e.openai_api_key
 )
 
-tools = [AnswerUser(), tools.SearchUserDatabase(), tools.SearchAgentDatabase()]
+tools = [AnswerUser(), tools.SearchUserDatabase(), tools.SearchChatbotDatabase()]
 tool_names = [tool.name for tool in tools]
 
 prompt = CustomPromptTemplate(
-    template=common.open_file('prompt-configs/single_agent_config'),
+    template=common.open_file(e.single_agent_config),
     tools=tools,
     # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
     # This includes the `intermediate_steps` variable because that is needed

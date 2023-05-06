@@ -89,7 +89,7 @@ tools = [AnswerUser(), tools.SearchUserHistory(), tools.SearchYourPastMessages()
 tool_names = [tool.name for tool in tools]
 
 prompt = CustomPromptTemplate(
-    template=common.open_file('prompt-configs/single_agent_config'),
+    template=common.open_file('prompt-configs/single_agent_gpt_3_config'),
     tools=tools,
     # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
     # This includes the `intermediate_steps` variable because that is needed
