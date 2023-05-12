@@ -1,4 +1,6 @@
 import sys
+import time
+
 from langchain.agents import AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 from langchain.prompts import BaseChatPromptTemplate
 from langchain import LLMChain
@@ -9,7 +11,7 @@ import re
 from langchain.tools import BaseTool
 import common
 import env_loader
-import tools
+import tools as t
 import env_loader as e
 from index import index_service
 
@@ -69,15 +71,16 @@ class AnswerUser(BaseTool):
         index_service.prepare_and_add(query, agent_payload)
         sys.stdout.write("\nEve: %s" % query)
         print()  # Newline
-        new_agent_message = 'eve: %s \n<<end_of_messages>>\n' % query
+        new_agent_message = 'eve: %s \n<<end_of_messages>>' % query
         agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
             .replace('<<end_of_messages>>', new_agent_message)
         index_service.prepare_and_add(query, agent_payload)
         e.index.upsert(agent_payload, 'AGENT')
         user_input = input("You: ")
-        new_user_message = 'user: %s \n<<end_of_messages>>\n' % user_input
+        new_user_message = 'user: %s \n<<end_of_messages>>' % user_input
         agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
             .replace('<<end_of_messages>>', new_user_message)
+        common.save_json('logs/%s.json' % int(time.time()), agent.llm_chain.prompt.template)
         index_service.prepare_and_add(user_input, user_payload)
         e.index.upsert(user_payload, 'USER')
         return user_input
@@ -94,7 +97,7 @@ llm = ChatOpenAI(
     openai_api_key=e.openai_api_key
 )
 
-tools = [AnswerUser(), tools.SearchUserDatabase(), tools.SearchChatbotDatabase()]
+tools = [AnswerUser()]  # t.SearchUserDatabase(), t.SearchChatbotDatabase()
 tool_names = [tool.name for tool in tools]
 
 prompt = CustomPromptTemplate(
@@ -121,7 +124,7 @@ while True:
     initial_user_message = 'user: %s \n<<end_of_messages>>\n' % user
     agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
         .replace('<<end_of_messages>>', initial_user_message)
-    for n in range(5):
+    while True:
         try:
             agent_executor.run(user)
         except ValueError as error:

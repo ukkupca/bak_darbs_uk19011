@@ -8,7 +8,7 @@ metadata_config = {
 }
 print(f"Creating index..")
 index = pinecone.create_index(
-    "virtual-agent-v0",
+    "virtual-agent-gpt-3-iz",
     dimension=1536,
     metric="cosine",
     pod_type="p1",
