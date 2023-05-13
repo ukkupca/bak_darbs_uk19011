@@ -78,7 +78,25 @@ def get_contents_as_string(batch):
     return '\n'.join(contents)
 
 
-def process_history(history, query, user):
+def process_user_messages(history, query):
+    system_prompt = common.open_file('prompt-configs/batching_system_config').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('prompt-configs/batching_prompt_config')
+    process_history(history, system_prompt, user_prompt)
+
+
+def process_agent_messages(history, query):
+    system_prompt = common.open_file('prompt-configs/agent_batching_system_config').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('prompt-configs/batching_prompt_config')
+    process_history(history, system_prompt, user_prompt)
+
+
+def process_summaries(summaries, query):
+    system_prompt = common.open_file('prompt-configs/summary_batching_system_config').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('prompt-configs/summary_batching_prompt_config')
+    process_history(summaries, system_prompt, user_prompt)
+
+
+def process_history(history, system_prompt, user_prompt):
     if not history['matches']:
         return ""
 
@@ -86,21 +104,15 @@ def process_history(history, query, user):
     metadata = [m['metadata'] for m in history['matches']]
     duplicates_removed = remove_duplicates(metadata)
     batches = split_array(duplicates_removed)
-    system_prompt = get_system_prompt(user)\
-        .replace('<<USER_TYPE>>', user)\
-        .replace('<<QUERY>>', query)
     system_message = {
         "role": "system",
         "content": system_prompt
     }
 
-    prompt = common.open_file('prompt-configs/batching_prompt_config')
-    role = get_role(user)
-
     for b in batches:
-        batch_prompt = prompt.replace('<<HISTORY>>', get_contents_as_string(b))
+        batch_prompt = user_prompt.replace('<<HISTORY>>', get_contents_as_string(b))
         user_message = {
-            "role": role,
+            "role": 'user',
             "content": batch_prompt
         }
         response = openai.ChatCompletion.create(
@@ -111,22 +123,3 @@ def process_history(history, query, user):
         )
         result.append(common.get_response(response))
     return '\n'.join(result)
-
-
-def get_system_prompt(user):
-    if user == 'USER':
-        prompt = common.open_file('prompt-configs/batching_system_config')
-    else:
-        prompt = common.open_file('prompt-configs/agent_batching_system_config')
-    return prompt
-
-
-def get_role(user):
-    if user == 'USER':
-        role = 'user'
-    else:
-        role = 'assistant'
-    return role
-
-
-

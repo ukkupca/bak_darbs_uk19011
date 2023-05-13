@@ -1,6 +1,5 @@
 import sys
 import time
-
 from langchain.agents import AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 from langchain.prompts import BaseChatPromptTemplate
 from langchain import LLMChain
@@ -14,6 +13,12 @@ import env_loader
 import tools as t
 import env_loader as e
 from index import index_service
+from memory.summary_memory import SummaryMemory
+
+# MEMORY
+summary_memory = SummaryMemory()
+# entity_memory = EntityMemory()
+# graph_memory = GraphMemory()
 
 
 class CustomPromptTemplate(BaseChatPromptTemplate):
@@ -45,7 +50,6 @@ class CustomOutputParser(AgentOutputParser):
         regex = r"Action\s*\d*\s*:(.*?)\nAction\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         match = re.search(regex, llm_output, re.DOTALL)
         if not match:
-            # TODO: Implement retry so it fixes format
             raise ValueError(f"Could not parse LLM output: `{llm_output}`")
         action = match.group(1).strip()
         action_input = match.group(2)
@@ -66,21 +70,25 @@ class AnswerUser(BaseTool):
                   ""
 
     def _run(self, query: str) -> str:
-        user_payload = list()
-        agent_payload = list()
-        index_service.prepare_and_add(query, agent_payload)
+        summary_memory.set_last_agent_input_and_save(query)
         sys.stdout.write("\nEve: %s" % query)
         print()  # Newline
         new_agent_message = 'eve: %s \n<<end_of_messages>>' % query
         agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
             .replace('<<end_of_messages>>', new_agent_message)
+
+        agent_payload = list()
         index_service.prepare_and_add(query, agent_payload)
         e.index.upsert(agent_payload, 'AGENT')
+
         user_input = input("You: ")
+        summary_memory.set_last_user_input(user_input)
         new_user_message = 'user: %s \n<<end_of_messages>>' % user_input
         agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
             .replace('<<end_of_messages>>', new_user_message)
         common.save_json('logs/%s.json' % int(time.time()), agent.llm_chain.prompt.template)
+
+        user_payload = list()
         index_service.prepare_and_add(user_input, user_payload)
         e.index.upsert(user_payload, 'USER')
         return user_input
@@ -90,16 +98,15 @@ class AnswerUser(BaseTool):
         raise NotImplementedError("AnswerUser does not support async")
 
 
+# VIRTUAL AGENT
 output_parser = CustomOutputParser()
 llm = ChatOpenAI(
     model=env_loader.openai_model,
     temperature=0,
     openai_api_key=e.openai_api_key
 )
-
-tools = [AnswerUser()]  # t.SearchUserDatabase(), t.SearchChatbotDatabase()
+tools = [AnswerUser(), t.SearchPastConversations()]  # t.SearchUserDatabase(), t.SearchChatbotDatabase()
 tool_names = [tool.name for tool in tools]
-
 prompt = CustomPromptTemplate(
     template=common.open_file(e.single_agent_config),
     tools=tools,
@@ -107,7 +114,6 @@ prompt = CustomPromptTemplate(
     # This includes the `intermediate_steps` variable because that is needed
     input_variables=["input", "intermediate_steps"]
 )
-
 # LLM chain consisting of the LLM and a prompt
 llm_chain = LLMChain(llm=llm, prompt=prompt)
 agent = LLMSingleActionAgent(
@@ -118,16 +124,21 @@ agent = LLMSingleActionAgent(
 )
 agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
+user = input("You: ")
+summary_memory.set_last_user_input(user)
+initial_user_message = 'user: %s \n<<end_of_messages>>\n' % user
+agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
+    .replace('<<end_of_messages>>', initial_user_message)
 while True:
-    # Getting initial user input, adding to local history and prepping index payload
-    user = input("You: ")
-    initial_user_message = 'user: %s \n<<end_of_messages>>\n' % user
-    agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
-        .replace('<<end_of_messages>>', initial_user_message)
-    while True:
-        try:
-            agent_executor.run(user)
-        except ValueError as error:
-            sys.stdout.write(str(error))
-            sys.stdout.write("System error, restoring connection...")
-
+    try:
+        agent_executor.run(user)
+    except ValueError as error:
+        sys.stdout.write(str(error))
+        sys.stdout.write("System error, restoring connection...")
+    except KeyboardInterrupt:
+        sys.stdout.write("Saving summary memory..")
+        summary_payload = list()
+        index_service.prepare_and_add(summary_memory.memory.buffer, summary_payload)
+        e.index.upsert(summary_payload, 'SUMMARY')
+        sys.stdout.write("Summary memory saved. Exiting system..")
+        break
