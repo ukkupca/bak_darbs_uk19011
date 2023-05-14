@@ -1,19 +1,15 @@
-from langchain.memory import ConversationSummaryMemory
 from langchain.llms import OpenAI
+from langchain.memory import ConversationKGMemory
 import env_loader as e
 from index import index_service
 
 
-class SummaryMemory:
+class GraphMemory:
     llm = OpenAI(
         temperature=0,
         openai_api_key=e.openai_api_key
     )
-    memory = ConversationSummaryMemory(
-        human_prefix='user',
-        ai_prefix='agent',
-        llm=llm
-    )
+    memory = ConversationKGMemory(llm=llm)
     last_user_input = ""
 
     def set_last_user_input(self, chat_input):
@@ -23,6 +19,6 @@ class SummaryMemory:
         self.memory.save_context({"input": self.last_user_input}, {"output": agent_input})
 
     def upsert_to_db(self):
-        summary_payload = list()
-        index_service.prepare_and_add(self.memory.buffer, summary_payload)
-        e.index.upsert(summary_payload, 'SUMMARY')
+        return
+        # TODO: how to save
+        # TODO: how to use

@@ -17,7 +17,7 @@ class SearchUserDatabase(BaseTool):
                                            top_k=100,
                                            include_values=False,
                                            include_metadata=True)
-        return process_index.process_history(index_user_history, query, 'USER')
+        return process_index.process_user_messages(index_user_history, query)
 
     async def _arun(self, query: str) -> str:
         """Use the tool asynchronously."""
@@ -38,16 +38,16 @@ class SearchChatbotDatabase(BaseTool):
                                            top_k=100,
                                            include_values=False,
                                            include_metadata=True)
-        return process_index.process_history(index_user_history, query, 'AGENT')
+        return process_index.process_agent_messages(index_user_history, query)
 
     async def _arun(self, query: str) -> str:
         """Use the tool asynchronously."""
         raise NotImplementedError("SearchChatbotDatabase does not support async")
 
 
-class SearchPastConversations(BaseTool):
-    name = "SearchPastConversations"
-    description = "Pass a question to find relevant information in past conversations. "
+class SearchMemory(BaseTool):
+    name = "SearchMemory"
+    description = "Pass a question to find out what user and chatbot have talked about previously."
 
     def _run(self, query: str) -> str:
         index_summaries = e.index.query(namespace='SUMMARY',
@@ -59,4 +59,4 @@ class SearchPastConversations(BaseTool):
 
     async def _arun(self, query: str) -> str:
         """Use the tool asynchronously."""
-        raise NotImplementedError("SearchPastConversations does not support async")
+        raise NotImplementedError("SearchMemory does not support async")

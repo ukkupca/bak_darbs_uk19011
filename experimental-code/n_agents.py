@@ -82,7 +82,7 @@ while True:
     index_service.prepare_and_add(chat_input, user_payload)
 
     base_prompt = CustomPromptTemplate(
-        template=common.open_file('prompt-configs/base_agent_config'),
+        template=common.open_file('../agent-prompt-configs/old/base_agent_config'),
         tools=tools,
         # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
         # This includes the `intermediate_steps` variable because that is needed

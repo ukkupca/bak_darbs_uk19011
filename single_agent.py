@@ -1,5 +1,4 @@
 import sys
-import time
 from langchain.agents import AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 from langchain.prompts import BaseChatPromptTemplate
 from langchain import LLMChain
@@ -12,12 +11,19 @@ import common
 import env_loader
 import tools as t
 import env_loader as e
-from index import index_service
+from memory.entity_memory import EntityMemory
+from memory.single_message_memory import SingleMessageMemory
 from memory.summary_memory import SummaryMemory
 
 # MEMORY
+SAVE_SINGLE_MESSAGE_MEMORY = False
+SAVE_SUMMARY_MEMORY = True
+SAVE_ENTITY_MEMORY = True
+SAVE_GRAPH_MEMORY = True
+
+single_message_memory = SingleMessageMemory()
 summary_memory = SummaryMemory()
-# entity_memory = EntityMemory()
+entity_memory = EntityMemory()
 # graph_memory = GraphMemory()
 
 
@@ -66,31 +72,31 @@ class AnswerUser(BaseTool):
                   "naturally, share your own thoughts and opinions, ask questions and encourage user to talk about " \
                   "themselves. This will make the conversation more engaging and enjoyable for the user." \
                   "Talk about one topic at a time. Only the user can end a conversation with you. When one " \
-                  "conversation comes to a natural end figure out a new topic you could talk about." \
-                  ""
+                  "conversation comes to a natural end figure out a new topic you could talk about."
 
     def _run(self, query: str) -> str:
-        summary_memory.set_last_agent_input_and_save(query)
+
         sys.stdout.write("\nEve: %s" % query)
         print()  # Newline
-        new_agent_message = 'eve: %s \n<<end_of_messages>>' % query
-        agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
-            .replace('<<end_of_messages>>', new_agent_message)
-
-        agent_payload = list()
-        index_service.prepare_and_add(query, agent_payload)
-        e.index.upsert(agent_payload, 'AGENT')
-
         user_input = input("You: ")
-        summary_memory.set_last_user_input(user_input)
-        new_user_message = 'user: %s \n<<end_of_messages>>' % user_input
-        agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
-            .replace('<<end_of_messages>>', new_user_message)
-        common.save_json('logs/%s.json' % int(time.time()), agent.llm_chain.prompt.template)
 
-        user_payload = list()
-        index_service.prepare_and_add(user_input, user_payload)
-        e.index.upsert(user_payload, 'USER')
+        new_messages = 'eve: %s \nuser: %s \n<<end_of_messages>>' % (query, user_input)
+        agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
+            .replace('<<end_of_messages>>', new_messages)
+
+
+        # common.save_json('logs/%s.json' % int(time.time()), agent.llm_chain.prompt.template)
+
+        # Handling memory
+        single_message_memory.add_agent_message_to_payload(query)
+        single_message_memory.add_user_message_to_payload(user_input)
+
+        summary_memory.set_last_agent_input_and_save(query)
+        summary_memory.set_last_user_input(user_input)
+
+        entity_memory.set_last_agent_input_and_save(query)
+        entity_memory.set_last_user_input(user_input)
+
         return user_input
 
     async def _arun(self, query: str) -> str:
@@ -105,7 +111,7 @@ llm = ChatOpenAI(
     temperature=0,
     openai_api_key=e.openai_api_key
 )
-tools = [AnswerUser(), t.SearchPastConversations()]  # t.SearchUserDatabase(), t.SearchChatbotDatabase()
+tools = [AnswerUser(), t.SearchMemory()]  # t.SearchUserDatabase(), t.SearchChatbotDatabase()
 tool_names = [tool.name for tool in tools]
 prompt = CustomPromptTemplate(
     template=common.open_file(e.single_agent_config),
@@ -124,21 +130,40 @@ agent = LLMSingleActionAgent(
 )
 agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
-user = input("You: ")
-summary_memory.set_last_user_input(user)
-initial_user_message = 'user: %s \n<<end_of_messages>>\n' % user
+# INITIAL INPUT
+initial_input = input("You: ")
+
+# Handling first input in memories
+single_message_memory.add_user_message_to_payload(initial_input)
+summary_memory.set_last_user_input(initial_input)
+entity_memory.set_last_user_input(initial_input)
+
+# Adding first input to prompt
+initial_user_message = 'user: %s \n<<end_of_messages>>\n' % initial_input
 agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
     .replace('<<end_of_messages>>', initial_user_message)
+
+agent_error = False
+# AGENT LOOP
 while True:
+    agent_input = initial_input
+    if agent_error:
+        agent_input = "Remember to use tools, correct format and correct information in your answers."
+        agent_error = False
     try:
-        agent_executor.run(user)
+        agent_executor.run(agent_input)
     except ValueError as error:
+        agent_error = True
         sys.stdout.write(str(error))
         sys.stdout.write("System error, restoring connection...")
     except KeyboardInterrupt:
-        sys.stdout.write("Saving summary memory..")
-        summary_payload = list()
-        index_service.prepare_and_add(summary_memory.memory.buffer, summary_payload)
-        e.index.upsert(summary_payload, 'SUMMARY')
-        sys.stdout.write("Summary memory saved. Exiting system..")
+        if SAVE_SUMMARY_MEMORY:
+            sys.stdout.write("Saving summary memory..")
+            summary_memory.upsert_to_db()
+            sys.stdout.write("Summary memory saved")
+
+        if SAVE_ENTITY_MEMORY:
+            sys.stdout.write("Saving entity memory..")
+            entity_memory.upsert_to_db()
+            sys.stdout.write("Entity memory saved")
         break

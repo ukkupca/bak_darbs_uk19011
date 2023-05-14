@@ -64,8 +64,7 @@ while True:
     loaded_user_history = load_history_old(user_history)
     loaded_agent_history = load_history_old(user_history)
 
-    # TODO: Add that chatbot should use emojis
-    prompt = common.open_file('old/vanilla_system_config') \
+    prompt = common.open_file('../agent-prompt-configs/old/vanilla_system_config') \
         .replace('<<USER>>', loaded_user_history) \
         .replace('<<AGENT>>', loaded_agent_history) \
         .replace('<<CURRENT>>', chat_input)

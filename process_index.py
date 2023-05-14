@@ -79,21 +79,21 @@ def get_contents_as_string(batch):
 
 
 def process_user_messages(history, query):
-    system_prompt = common.open_file('prompt-configs/batching_system_config').replace('<<QUERY>>', query)
-    user_prompt = common.open_file('prompt-configs/batching_prompt_config')
-    process_history(history, system_prompt, user_prompt)
+    system_prompt = common.open_file('batching-prompt-configs/batching_system_config__user').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('batching-prompt-configs/batching_prompt_config')
+    return process_history(history, system_prompt, user_prompt)
 
 
 def process_agent_messages(history, query):
-    system_prompt = common.open_file('prompt-configs/agent_batching_system_config').replace('<<QUERY>>', query)
-    user_prompt = common.open_file('prompt-configs/batching_prompt_config')
-    process_history(history, system_prompt, user_prompt)
+    system_prompt = common.open_file('batching-prompt-configs/batching_system_config__agent').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('batching-prompt-configs/batching_prompt_config')
+    return process_history(history, system_prompt, user_prompt)
 
 
 def process_summaries(summaries, query):
-    system_prompt = common.open_file('prompt-configs/summary_batching_system_config').replace('<<QUERY>>', query)
-    user_prompt = common.open_file('prompt-configs/summary_batching_prompt_config')
-    process_history(summaries, system_prompt, user_prompt)
+    system_prompt = common.open_file('batching-prompt-configs/summary_batching_system_config').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('batching-prompt-configs/summary_batching_prompt_config')
+    return process_history(summaries, system_prompt, user_prompt)
 
 
 def process_history(history, system_prompt, user_prompt):
