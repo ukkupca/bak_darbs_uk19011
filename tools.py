@@ -45,9 +45,9 @@ class SearchChatbotDatabase(BaseTool):
         raise NotImplementedError("SearchChatbotDatabase does not support async")
 
 
-class SearchMemory(BaseTool):
-    name = "SearchMemory"
-    description = "Pass a question to find out what user and chatbot have talked about previously."
+class SearchSummaryMemory(BaseTool):
+    name = "SearchSummaryMemory"
+    description = "Pass a question to find out what is saved in summary memories."
 
     def _run(self, query: str) -> str:
         index_summaries = e.index.query(namespace='SUMMARY',
@@ -59,4 +59,21 @@ class SearchMemory(BaseTool):
 
     async def _arun(self, query: str) -> str:
         """Use the tool asynchronously."""
-        raise NotImplementedError("SearchMemory does not support async")
+        raise NotImplementedError("SearchSummaryMemory does not support async")
+
+
+class SearchEntityMemory(BaseTool):
+    name = "SearchEntityMemory"
+    description = "Pass a question to find out what entities are saved in memory."
+
+    def _run(self, query: str) -> str:
+        index_summaries = e.index.query(namespace='ENTITY',
+                                        vector=common.gpt_embedding(query),
+                                        top_k=100,
+                                        include_values=False,
+                                        include_metadata=True)
+        return process_index.process_summaries(index_summaries, query)
+
+    async def _arun(self, query: str) -> str:
+        """Use the tool asynchronously."""
+        raise NotImplementedError("SearchEntityMemory does not support async")

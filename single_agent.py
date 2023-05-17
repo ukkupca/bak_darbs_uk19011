@@ -111,7 +111,7 @@ llm = ChatOpenAI(
     temperature=0,
     openai_api_key=e.openai_api_key
 )
-tools = [AnswerUser(), t.SearchMemory()]  # t.SearchUserDatabase(), t.SearchChatbotDatabase()
+tools = [AnswerUser(), t.SearchEntityMemory()]  # t.SearchUserDatabase(), t.SearchChatbotDatabase()
 tool_names = [tool.name for tool in tools]
 prompt = CustomPromptTemplate(
     template=common.open_file(e.single_agent_config),
