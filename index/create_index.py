@@ -1,6 +1,5 @@
 import pinecone
-
-pinecone.init(api_key="a433ce32-e7cb-4684-9280-1d201daccc85", environment="eu-west1-gcp")
+import env_loader as e
 
 # Use to create an index that would not index all metadata
 metadata_config = {
@@ -8,7 +7,7 @@ metadata_config = {
 }
 print(f"Creating index..")
 index = pinecone.create_index(
-    "virtual-agent-gpt-3-iz",
+    e.index_name,
     dimension=1536,
     metric="cosine",
     pod_type="p1",

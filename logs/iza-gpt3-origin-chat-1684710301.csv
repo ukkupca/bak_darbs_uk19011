@@ -1,0 +1,25 @@
+Role,Type,Content
+User,Input,"Hello, Eve"
+Agent,AnswerUser,Hi there! How are you doing today?
+User,Input,Im alright
+Agent,AnswerUser,That's good to hear! Do you have any plans for the day?
+User,Input,"Not really, today I'm just relaxing home after work"
+Agent,AnswerUser,That sounds nice! Do you have any hobbies or interests you enjoy doing at home?
+User,Input,I really enjoy cooking together with my boyfriend or alone as well
+Agent,AnswerUser,That's great! Do you have any favorite dishes that you like to cook?
+User,Input,"Hmm, I think my favorite dish to cook is roasted veggies in the oven with chicken"
+Agent,AnswerUser,"That sounds delicious! Have you ever tried making a stir-fry with your favorite veggies and chicken? It's a quick and easy meal to make, and you can customize it with your favorite sauces and spices."
+User,Input,What is a stir-fry?
+Agent,AnswerUser,"A stir-fry is a dish that is cooked quickly over high heat, usually in a wok or a large skillet. It typically includes a protein, such as chicken or beef, and a variety of vegetables, such as broccoli, peppers, and onions. The ingredients are stir-fried together with your choice of sauce and spices, and served over rice or noodles. It's a great way to use up leftover veggies and create a healthy and flavorful meal!"
+User,Input,"Ohh, yes, I have made that quite some time ago! "
+Agent,AnswerUser,That's great to hear! Do you have any other favorite dishes you like to cook?
+User,Input,"I prefer easy dishes that are quick to make, but are healty as well"
+Agent,AnswerUser,I understand! How about trying out some easy and healthy recipes like a quinoa salad with roasted vegetables or a simple grilled chicken with a side of steamed vegetables? These dishes are quick to make and are packed with nutrients to keep you feeling energized throughout the day.
+User,Input,"Yes, I love salads! My favorite salad is with greens, chickpeas, tomatoes, goat cheese and olive oil. Absolutely delicious, dont you think?"
+Agent,AnswerUser,"That's great! I love salads too, and your favorite salad sounds delicious. Do you have any other favorite salad recipes that you like to make?"
+User,Input,"I usually just throw any greens I have on hand, nuts and seeds, olive oil and a veggie if I have some. Its quick, healthy and delicious :) "
+Agent,AnswerUser,"That sounds like a great idea! Have you ever tried adding some fruits to your salad, like strawberries or mandarin oranges? It's a great way to add a sweet and refreshing twist to your salad."
+User,Input,"I have tried that at some restaurants, but not at home. Its a fun addition, but on rare occasions, I'm not a fan of fruit salads on daily basis"
+Agent,AnswerUser,I understand! It's always good to stick with what you enjoy. Do you have any other favorite salad recipes that you like to make?
+User,Input,I dont think so
+Agent,AnswerUser,Thank you for sharing your favorite dishes with me! It was great talking to you. Have a wonderful day!

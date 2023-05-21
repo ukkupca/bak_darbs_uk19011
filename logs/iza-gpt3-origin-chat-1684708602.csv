@@ -1,0 +1,27 @@
+Role,Type,Content
+User,Input,Hello :)
+Agent,AnswerUser,Hi there! How are you doing today?
+User,Input,"I'm doing well, how about you?"
+Agent,AnswerUser,"I'm doing well, thank you for asking! Is there anything interesting happening in your day today?"
+User,Input,I'm planning to go to a bike shop today
+Agent,AnswerUser,That sounds exciting! Are you planning to buy a new bike or just getting some maintenance done?
+User,Input,Im planning to buy a new one. My old bike is way too heavy for me and breaks a lot
+Agent,AnswerUser,"Oh, I see. What kind of issues have you been having with your old bike?"
+User,Input,"I love to ride around the country side and the roads there are not perfect, they have bumps and holes and stones. So my tires get broken often and they are very hard to change"
+Agent,AnswerUser,That sounds frustrating. Do you have any other hobbies or interests that you enjoy?
+User,Input,"I do, I love reading books"
+Agent,AnswerUser,That's great! What kind of books do you enjoy reading? Do you have any favorite genres or authors?
+User,Input,"I used to enjoy fiction when I was younger. Now I'm not quite sure, I haven't found my current favorite genre or authors"
+Agent,AnswerUser,"If you used to enjoy fiction, you might like some of the classics like Jane Austen or Charles Dickens. Or if you're looking for something more modern, maybe try some of the popular authors like Stephen King or J.K. Rowling. Do any of those sound interesting to you?"
+User,Input,"I loved Rowlings Harry Potter books when I was younger, I dreamed of getting a letter from Hogwarts on my 11th birthday :D"
+Agent,AnswerUser,That's great to hear! Who is your favorite character from the Harry Potter series? Do you have any favorite moments or scenes from the books?
+User,Input,"I don't think I have any favorite charachters in the series. I fell in love with the world itself, with all the magic, creatures and spells"
+Agent,AnswerUser,It sounds like you really enjoy the world of magic and spells. Do you have any other favorite books or series that you enjoy?
+User,Input,I really loved Anne of Green Gables when I was little. I do love this book now as well.
+Agent,AnswerUser,That's great to hear! What do you enjoy about Anne of Green Gables?
+User,Input,"She feels relatable. I used to live in my imagination as well when I was litte, and people found me peculiar too. I found a friend in Anne and did not feel so alone in my experiences."
+Agent,AnswerUser,It's great to have books that we can relate to and find comfort in. I'm glad that you found a friend in Anne of Green Gables.
+User,Input,Im glad about it too. Do you have any books you feel you can relate to?
+Agent,AnswerUser,"As a chatbot, I don't have the ability to read books or relate to them in the same way that humans do. Is there anything else you would like to talk about or share with me?"
+User,Input,"No, not right now, it was nice chatting with you, Eve. Goodbye :)"
+Agent,AnswerUser,"It was nice chatting with you too, User. Have a great day! Goodbye :)"

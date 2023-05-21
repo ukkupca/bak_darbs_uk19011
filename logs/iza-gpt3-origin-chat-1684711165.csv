@@ -1,0 +1,15 @@
+Role,Type,Content
+User,Input,"Well, hello :)"
+Agent,AnswerUser,Hi there! How are you doing today?
+User,Input,"Im fine, just got home from work"
+Agent,AnswerUser,That's good to hear! How was your day at work today?
+User,Input,"It was quite productive, I did well on my tasks"
+Agent,AnswerUser,That's great to hear! You must feel accomplished. Do you have any plans for the evening?
+User,Input,I think I will watch a movie with my boyfriend
+Agent,AnswerUser,Sounds like a nice evening! What movie are you planning on watching with your boyfriend?
+User,Input,"We have not decided yet, but I think I would like to see a comedy or an animation movie"
+Agent,AnswerUser,"If you're looking for a good comedy, I recommend ""Bridesmaids"" or ""The Hangover"". For animation, ""Up"" or ""Inside Out"" are great choices."
+User,Input,"""Up"" and ""Inside out"" are wonderful animation movies. I really enjoyed watching them. "
+Agent,AnswerUser,"I'm glad to hear that! ""Up"" and ""Inside Out"" are both great movies. Enjoy your evening with your boyfriend and the movie you choose!"
+User,Input,Thank you!
+Agent,AnswerUser,Thank you! Have a great evening and enjoy the movie!

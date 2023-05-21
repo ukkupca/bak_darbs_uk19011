@@ -8,24 +8,31 @@ from langchain.schema import AgentAction, AgentFinish, HumanMessage
 import re
 from langchain.tools import BaseTool
 import common
+import control_session_service
 import env_loader
 import tools as t
 import env_loader as e
+from control_session_service import IS_CONTROL_SESSION
 from memory.entity_memory import EntityMemory
+from memory.graph_memory import GraphMemory
 from memory.single_message_memory import SingleMessageMemory
 from memory.summary_memory import SummaryMemory
+from logs import log_service
 
 # MEMORY
 SAVE_SINGLE_MESSAGE_MEMORY = False
-SAVE_SUMMARY_MEMORY = True
-SAVE_ENTITY_MEMORY = True
-SAVE_GRAPH_MEMORY = True
+SAVE_SUMMARY_MEMORY = False
+SAVE_ENTITY_MEMORY = False
+# SAVE_GRAPH_MEMORY = False
+
+last_user_input = None
 
 single_message_memory = SingleMessageMemory()
 summary_memory = SummaryMemory()
 entity_memory = EntityMemory()
-# graph_memory = GraphMemory()
 
+
+# graph_memory = GraphMemory()
 
 class CustomPromptTemplate(BaseChatPromptTemplate):
     # The template to use
@@ -65,25 +72,28 @@ class CustomOutputParser(AgentOutputParser):
 
 class AnswerUser(BaseTool):
     name = "AnswerUser"
-    # description = "Pass your answer to the user when you have an answer ready. Receive users response."
-    description = "Pass your answer to the user when you have an answer ready. Receive users response." \
-                  "Remember that you want to be a close friend to the user. Be funny and kind. The conversation must " \
-                  "flow " \
-                  "naturally, share your own thoughts and opinions, ask questions and encourage user to talk about " \
-                  "themselves. This will make the conversation more engaging and enjoyable for the user." \
-                  "Talk about one topic at a time. Only the user can end a conversation with you. When one " \
-                  "conversation comes to a natural end figure out a new topic you could talk about."
+    description = "Pass your answer to the user when you have an answer ready. Receive users response."
+
+    # description = "Pass your answer to the user when you have an answer ready. Receive users response." \ "Remember
+    # that you want to be a close friend to the user. Be funny and kind. The conversation must " \ "flow " \
+    # "naturally, share your own thoughts and opinions, ask questions and encourage user to talk about " \
+    # "themselves. This will make the conversation more engaging and enjoyable for the user." \ "Talk about one topic
+    # at a time. Only the user can end a conversation with you. When one " \ "conversation comes to a natural end
+    # figure out a new topic you could talk about."
 
     def _run(self, query: str) -> str:
-
         sys.stdout.write("\nEve: %s" % query)
         print()  # Newline
+        log_service.logs.append(['Agent', 'AnswerUser', query])
+
         user_input = input("You: ")
+        log_service.logs.append(['User', 'Input', user_input])
+        global last_user_input
+        last_user_input = user_input
 
         new_messages = 'eve: %s \nuser: %s \n<<end_of_messages>>' % (query, user_input)
         agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
             .replace('<<end_of_messages>>', new_messages)
-
 
         # common.save_json('logs/%s.json' % int(time.time()), agent.llm_chain.prompt.template)
 
@@ -96,6 +106,9 @@ class AnswerUser(BaseTool):
 
         entity_memory.set_last_agent_input_and_save(query)
         entity_memory.set_last_user_input(user_input)
+
+        # graph_memory.set_last_agent_input_and_save(query)
+        # graph_memory.set_last_user_input(user_input)
 
         return user_input
 
@@ -111,7 +124,8 @@ llm = ChatOpenAI(
     temperature=0,
     openai_api_key=e.openai_api_key
 )
-tools = [AnswerUser(), t.SearchEntityMemory()]  # t.SearchUserDatabase(), t.SearchChatbotDatabase()
+tools = [AnswerUser(), t.SearchUserPastMessages(),
+         t.SearchChatbotPastMessages()]  # t.searchSummaryMemory t.SearchEntityMemory()
 tool_names = [tool.name for tool in tools]
 prompt = CustomPromptTemplate(
     template=common.open_file(e.single_agent_config),
@@ -126,44 +140,61 @@ agent = LLMSingleActionAgent(
     llm_chain=llm_chain,
     output_parser=output_parser,
     stop=["\nObservation:"],
-    allowed_tools=tool_names
+    allowed_tools=tool_names,
+    verbose=False
 )
 agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
-# INITIAL INPUT
-initial_input = input("You: ")
-
-# Handling first input in memories
-single_message_memory.add_user_message_to_payload(initial_input)
-summary_memory.set_last_user_input(initial_input)
-entity_memory.set_last_user_input(initial_input)
-
-# Adding first input to prompt
-initial_user_message = 'user: %s \n<<end_of_messages>>\n' % initial_input
-agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
-    .replace('<<end_of_messages>>', initial_user_message)
-
-agent_error = False
 # AGENT LOOP
-while True:
-    agent_input = initial_input
-    if agent_error:
-        agent_input = "Remember to use tools, correct format and correct information in your answers."
-        agent_error = False
-    try:
-        agent_executor.run(agent_input)
-    except ValueError as error:
-        agent_error = True
-        sys.stdout.write(str(error))
-        sys.stdout.write("System error, restoring connection...")
-    except KeyboardInterrupt:
-        if SAVE_SUMMARY_MEMORY:
-            sys.stdout.write("Saving summary memory..")
-            summary_memory.upsert_to_db()
-            sys.stdout.write("Summary memory saved")
+if IS_CONTROL_SESSION is False:
 
-        if SAVE_ENTITY_MEMORY:
-            sys.stdout.write("Saving entity memory..")
-            entity_memory.upsert_to_db()
-            sys.stdout.write("Entity memory saved")
-        break
+    # INITIAL INPUT
+    initial_input = input("You: ")
+    log_service.logs.append(['User', 'Input', initial_input])
+    last_user_input = initial_input
+
+    # Handling first input in memories
+    single_message_memory.add_user_message_to_payload(initial_input)
+    summary_memory.set_last_user_input(initial_input)
+    entity_memory.set_last_user_input(initial_input)
+    # graph_memory.set_last_user_input(initial_input)
+
+    # Adding first input to prompt
+    initial_user_message = 'user: %s \n<<end_of_messages>>\n' % initial_input
+    agent.llm_chain.prompt.template = agent.llm_chain.prompt.template \
+        .replace('<<end_of_messages>>', initial_user_message)
+
+    while True:
+        try:
+            agent_executor.run(last_user_input)
+        except ValueError as error:
+            sys.stdout.write(str(error))
+            sys.stdout.write("System error, restoring connection...")
+        except KeyboardInterrupt:
+            if log_service.SAVE_LOGS:
+                sys.stdout.write("\nSaving logs..")
+                log_service.save()
+                sys.stdout.write("\nLogs saved")
+
+            if SAVE_SINGLE_MESSAGE_MEMORY:
+                sys.stdout.write("\nSaving single message memory..")
+                single_message_memory.upsert_all_messages()
+                sys.stdout.write("\nSingle message memory saved")
+
+            if SAVE_SUMMARY_MEMORY:
+                sys.stdout.write("\nSaving summary memory..")
+                summary_memory.upsert_to_db()
+                sys.stdout.write("\nSummary memory saved")
+
+            if SAVE_ENTITY_MEMORY:
+                sys.stdout.write("\nSaving entity memory..")
+                entity_memory.upsert_to_db()
+                sys.stdout.write("\nEntity memory saved")
+            break
+else:
+    control_session_service.import_control_questions()
+    for question in control_session_service.control_questions:
+        for m in range(1, 4):
+            response = agent_executor.run(question['controlQuestion'])
+            control_session_service.add_result([question['id'], e.openai_model, m, response])
+    control_session_service.save()

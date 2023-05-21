@@ -5,7 +5,6 @@ from langchain.memory import ConversationEntityMemory
 
 import common
 import env_loader as e
-from index import index_service
 
 
 class EntityMemory:

@@ -96,9 +96,21 @@ def process_summaries(summaries, query):
     return process_history(summaries, system_prompt, user_prompt)
 
 
+def process_entities(history, query):
+    system_prompt = common.open_file('batching-prompt-configs/entity_batching_system_config').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('batching-prompt-configs/entity_batching_prompt_config')
+    return process_history(history, system_prompt, user_prompt)
+
+
+def process_graphs(history, query):
+    system_prompt = common.open_file('batching-prompt-configs/entity_batching_system_config').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('batching-prompt-configs/entity_batching_prompt_config')
+    return process_history(history, system_prompt, user_prompt)
+
+
 def process_history(history, system_prompt, user_prompt):
     if not history['matches']:
-        return ""
+        return "Past conversations do not contain relevant information"
 
     result = []
     metadata = [m['metadata'] for m in history['matches']]

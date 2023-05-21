@@ -1,0 +1,7 @@
+Role,Type,Content
+User,Input,Hi! We watched the movie you suggested last night :)
+Agent,AnswerUser,Hi there! I'm glad to hear that. What did you think of the movie?
+User,Input,It was funny! Didn't think I would enjoy it as much as I did
+Agent,AnswerUser,That's great to hear! Do you have any other movie recommendations or preferences?
+User,Input,"Me? No, you were suggesting the movie to me"
+Agent,AnswerUser,That's okay! How about your hobbies or interests? What do you like to do in your free time?
