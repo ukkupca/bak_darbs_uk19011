@@ -3,7 +3,7 @@ import time
 import env_loader as e
 
 # LOGS
-SAVE_LOGS = False
+SAVE_LOGS = True
 csv_fields = ['Role', 'Type', 'Content']
 logs = []
 filename = 'logs/%s-%s.csv' % (e.log_name, int(time.time()))

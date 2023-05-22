@@ -1,15 +1,17 @@
 import csv
+import time
+
 import env_loader as e
 
 # CONTROL SESSION
-IS_CONTROL_SESSION = False
-CONTROL_SESSION_TYPE = 'IZA-gpt-3.5-data-gpt-3.5'
+IS_CONTROL_SESSION = True
+CONTROL_SESSION_TYPE = 'iza-gpt-3.5-turbo-origin'
 
-control_question_filename = "control-session-questions/%s.csv" % CONTROL_SESSION_TYPE
+control_question_filename = "control-session-questions/%s-%s.csv" % (CONTROL_SESSION_TYPE, 'control-questions')
 fields = []
 control_questions = []
 
-filename = 'control-session-results/%s-%s.csv' % (e.openai_model, CONTROL_SESSION_TYPE)
+filename = 'control-session-results/%s-%s-%s-%s.csv' % (CONTROL_SESSION_TYPE, e.openai_model, 'results', str(time.time()))
 csv_fields = ['CQID', 'Model', 'AttemptNumber', 'Answer']
 results = []
 

@@ -1,4 +1,6 @@
 import sys
+import time
+
 from langchain.agents import AgentExecutor, LLMSingleActionAgent, AgentOutputParser
 from langchain.prompts import BaseChatPromptTemplate
 from langchain import LLMChain
@@ -74,14 +76,11 @@ class AnswerUser(BaseTool):
     name = "AnswerUser"
     description = "Pass your answer to the user when you have an answer ready. Receive users response."
 
-    # description = "Pass your answer to the user when you have an answer ready. Receive users response." \ "Remember
-    # that you want to be a close friend to the user. Be funny and kind. The conversation must " \ "flow " \
-    # "naturally, share your own thoughts and opinions, ask questions and encourage user to talk about " \
-    # "themselves. This will make the conversation more engaging and enjoyable for the user." \ "Talk about one topic
-    # at a time. Only the user can end a conversation with you. When one " \ "conversation comes to a natural end
-    # figure out a new topic you could talk about."
-
     def _run(self, query: str) -> str:
+        if IS_CONTROL_SESSION is True:
+            log_service.logs.append(['Agent', 'AnswerUser', query])
+            raise ChildProcessError(query)
+
         sys.stdout.write("\nEve: %s" % query)
         print()  # Newline
         log_service.logs.append(['Agent', 'AnswerUser', query])
@@ -98,14 +97,17 @@ class AnswerUser(BaseTool):
         # common.save_json('logs/%s.json' % int(time.time()), agent.llm_chain.prompt.template)
 
         # Handling memory
-        single_message_memory.add_agent_message_to_payload(query)
-        single_message_memory.add_user_message_to_payload(user_input)
+        if SAVE_SINGLE_MESSAGE_MEMORY:
+            single_message_memory.add_agent_message_to_payload(query)
+            single_message_memory.add_user_message_to_payload(user_input)
 
-        summary_memory.set_last_agent_input_and_save(query)
-        summary_memory.set_last_user_input(user_input)
+        if SAVE_SUMMARY_MEMORY:
+            summary_memory.set_last_agent_input_and_save(query)
+            summary_memory.set_last_user_input(user_input)
 
-        entity_memory.set_last_agent_input_and_save(query)
-        entity_memory.set_last_user_input(user_input)
+        if SAVE_ENTITY_MEMORY:
+            entity_memory.set_last_agent_input_and_save(query)
+            entity_memory.set_last_user_input(user_input)
 
         # graph_memory.set_last_agent_input_and_save(query)
         # graph_memory.set_last_user_input(user_input)
@@ -140,8 +142,7 @@ agent = LLMSingleActionAgent(
     llm_chain=llm_chain,
     output_parser=output_parser,
     stop=["\nObservation:"],
-    allowed_tools=tool_names,
-    verbose=False
+    allowed_tools=tool_names
 )
 agent_executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
 
@@ -193,8 +194,43 @@ if IS_CONTROL_SESSION is False:
             break
 else:
     control_session_service.import_control_questions()
+    variable = 0
     for question in control_session_service.control_questions:
-        for m in range(1, 4):
-            response = agent_executor.run(question['controlQuestion'])
-            control_session_service.add_result([question['id'], e.openai_model, m, response])
+        variable = variable + 1
+        if variable != 20:
+            continue
+        control_question = question[2]
+        sys.stdout.write("\nAsking question: %s" % control_question)
+        auto_input = 'user: %s \n<<end_of_messages>>\n' % control_question
+
+        template = common.open_file(e.single_agent_config)
+        new_template = template.replace('<<end_of_messages>>', auto_input)
+
+        for m in range(1, 3):
+            sys.stdout.write("\nAnswer attempt: %s" % str(m))
+            agent.llm_chain.prompt.template = new_template
+            # common.save_json('logs/%s.json' % int(time.time()), agent.llm_chain.prompt.template)
+            log_service.logs.append(['User', 'Input', control_question])
+
+            response = 'Interrupted'
+            try:
+                agent_executor.run(control_question)
+            except ChildProcessError as error:
+                response = str(error)
+                sys.stdout.write("\nResponse: %s" % response)
+            except ValueError as error:
+                response = "Error: %s" % str(error)
+                sys.stdout.write("\nResponse: %s" % response)
+            except KeyboardInterrupt:
+                if log_service.SAVE_LOGS:
+                    sys.stdout.write("\nSaving logs..")
+                    log_service.save()
+                    sys.stdout.write("\nLogs saved")
+            except Exception as exception:
+                response = "System exception"
+
+            control_session_service.add_result([question[0], e.openai_model, m, response])
+    sys.stdout.write("\nSaving logs..")
+    log_service.save()
+    sys.stdout.write("\nLogs saved")
     control_session_service.save()
