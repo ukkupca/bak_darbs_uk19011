@@ -7,7 +7,8 @@ from index import index_service
 class SummaryMemory:
     llm = OpenAI(
         temperature=0,
-        openai_api_key=e.openai_api_key
+        openai_api_key=e.openai_api_key,
+        max_tokens=2000
     )
     memory = ConversationSummaryMemory(
         human_prefix='user',

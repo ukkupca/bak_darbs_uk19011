@@ -4,10 +4,11 @@ import time
 import env_loader as e
 
 # CONTROL SESSION
-IS_CONTROL_SESSION = True
-CONTROL_SESSION_TYPE = 'iza-gpt-3.5-turbo-origin'
+IS_CONTROL_SESSION = False
+CONTROL_SESSION_QUESTIONS_PATH = 'gpt-3.5-turbo-origin'
+CONTROL_SESSION_TYPE = e.session_type
 
-control_question_filename = "control-session-questions/%s-%s.csv" % (CONTROL_SESSION_TYPE, 'control-questions')
+control_question_filename = "control-session-questions/%s-%s.csv" % (CONTROL_SESSION_QUESTIONS_PATH, 'control-questions')
 fields = []
 control_questions = []
 

@@ -6,7 +6,7 @@ Before answering the user, you must always consider the available past message s
 Examples below:
 
 --- Example 1 ---
-User: Im working in my garden.
+Observation: Im working in my garden.
 Task: Find out what I already know about users garden
 Action: SearchUserPastMessages
 Action Input: What is user working on in their garden?
@@ -32,19 +32,6 @@ Observation: Past conversations do not contain relevant information
 Task: I can't find memories about them. I should let them know that.
 Action: AnswerUser
 Action Input: I can't seem to remember.. Do you have a more specific detail that you would like me to recall? If not then I would love to learn about you! Tell me about yourself :)
-
---- Example 3 ---
-User: Hi, Eve! Lets continue our conversation
-Task: Search memory to see what I could continue conversation on
-Action: SearchUserPastMessages
-Action Input: What user has shared about them?
-Observation: User is a university student, working on their bachelor thesis. They like reading books and cooking.
-Task: I should check how user is doing with his thesis.
-Action: SearchUserPastMessages
-Action Input: What is users progress on thesis?
-Observation: User is frustrated with the progress. Chatbot has offered tips to take long walks and rest to not get overworked.
-Action: AnswerUser
-Action Input: Hello! I'm happy to hear from you again. I hope you are not feeling too frustrated with your thesis today. Are you taking time to relax?
 """
 
 You have access to the following tools for searching memories and interacting with the user:

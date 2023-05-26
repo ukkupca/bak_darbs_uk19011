@@ -17,12 +17,14 @@ import env_loader as e
 from control_session_service import IS_CONTROL_SESSION
 from memory.entity_memory import EntityMemory
 from memory.graph_memory import GraphMemory
+from memory.message_batch_memory import MessageBatchMemory
 from memory.single_message_memory import SingleMessageMemory
 from memory.summary_memory import SummaryMemory
 from logs import log_service
 
 # MEMORY
 SAVE_SINGLE_MESSAGE_MEMORY = False
+SAVE_BATCH_MEMORY = False
 SAVE_SUMMARY_MEMORY = False
 SAVE_ENTITY_MEMORY = False
 # SAVE_GRAPH_MEMORY = False
@@ -30,8 +32,10 @@ SAVE_ENTITY_MEMORY = False
 last_user_input = None
 
 single_message_memory = SingleMessageMemory()
+batch_memory = MessageBatchMemory()
 summary_memory = SummaryMemory()
 entity_memory = EntityMemory()
+
 
 
 # graph_memory = GraphMemory()
@@ -85,6 +89,19 @@ class AnswerUser(BaseTool):
         print()  # Newline
         log_service.logs.append(['Agent', 'AnswerUser', query])
 
+        # Handling memory
+        if SAVE_SINGLE_MESSAGE_MEMORY:
+            single_message_memory.add_agent_message_to_payload(query)
+
+        if SAVE_BATCH_MEMORY:
+            batch_memory.add_agent_message(query)
+
+        if SAVE_SUMMARY_MEMORY:
+            summary_memory.set_last_agent_input_and_save(query)
+
+        if SAVE_ENTITY_MEMORY:
+            entity_memory.set_last_agent_input_and_save(query)
+
         user_input = input("You: ")
         log_service.logs.append(['User', 'Input', user_input])
         global last_user_input
@@ -98,15 +115,15 @@ class AnswerUser(BaseTool):
 
         # Handling memory
         if SAVE_SINGLE_MESSAGE_MEMORY:
-            single_message_memory.add_agent_message_to_payload(query)
             single_message_memory.add_user_message_to_payload(user_input)
 
+        if SAVE_BATCH_MEMORY:
+            batch_memory.add_user_message(user_input)
+
         if SAVE_SUMMARY_MEMORY:
-            summary_memory.set_last_agent_input_and_save(query)
             summary_memory.set_last_user_input(user_input)
 
         if SAVE_ENTITY_MEMORY:
-            entity_memory.set_last_agent_input_and_save(query)
             entity_memory.set_last_user_input(user_input)
 
         # graph_memory.set_last_agent_input_and_save(query)
@@ -126,8 +143,7 @@ llm = ChatOpenAI(
     temperature=0,
     openai_api_key=e.openai_api_key
 )
-tools = [AnswerUser(), t.SearchUserPastMessages(),
-         t.SearchChatbotPastMessages()]  # t.searchSummaryMemory t.SearchEntityMemory()
+tools = [AnswerUser(), t.SearchBatchMemory()]  # t.searchSummaryMemory t.SearchEntityMemory() t.SearchUserPastMessages(), t.SearchChatbotPastMessages()
 tool_names = [tool.name for tool in tools]
 prompt = CustomPromptTemplate(
     template=common.open_file(e.single_agent_config),
@@ -156,6 +172,7 @@ if IS_CONTROL_SESSION is False:
 
     # Handling first input in memories
     single_message_memory.add_user_message_to_payload(initial_input)
+    batch_memory.add_user_message(initial_input)
     summary_memory.set_last_user_input(initial_input)
     entity_memory.set_last_user_input(initial_input)
     # graph_memory.set_last_user_input(initial_input)
@@ -182,6 +199,11 @@ if IS_CONTROL_SESSION is False:
                 single_message_memory.upsert_all_messages()
                 sys.stdout.write("\nSingle message memory saved")
 
+            if SAVE_BATCH_MEMORY:
+                sys.stdout.write("\nSaving batch message memory..")
+                batch_memory.upsert_all_batches()
+                sys.stdout.write("\nBatch message memory saved")
+
             if SAVE_SUMMARY_MEMORY:
                 sys.stdout.write("\nSaving summary memory..")
                 summary_memory.upsert_to_db()
@@ -197,7 +219,7 @@ else:
     variable = 0
     for question in control_session_service.control_questions:
         variable = variable + 1
-        if variable != 20:
+        if variable != 1:  # 7,8,16
             continue
         control_question = question[2]
         sys.stdout.write("\nAsking question: %s" % control_question)
@@ -209,7 +231,6 @@ else:
         for m in range(1, 3):
             sys.stdout.write("\nAnswer attempt: %s" % str(m))
             agent.llm_chain.prompt.template = new_template
-            # common.save_json('logs/%s.json' % int(time.time()), agent.llm_chain.prompt.template)
             log_service.logs.append(['User', 'Input', control_question])
 
             response = 'Interrupted'

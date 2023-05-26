@@ -12,7 +12,7 @@ class EntityMemory:
         temperature=0,
         openai_api_key=e.openai_api_key
     )
-    memory = ConversationEntityMemory(llm=llm)
+    memory = ConversationEntityMemory(llm=llm, human_prefix='User')
     last_user_input = ""
     payload = list()
 
@@ -24,9 +24,11 @@ class EntityMemory:
         self.memory.save_context({"input": self.last_user_input}, {"output": agent_input})
 
     def prepare_and_add(self, entities):
+        counter = 0
         for key, entity in entities.items():
-            identity = str(int(time.time()))
-            message_vector = common.gpt_embedding(key)
+            counter = counter + 100
+            identity = str(int(time.time()) + counter)
+            message_vector = common.gpt_embedding(entity)
             metadata = {
                 'timestamp': identity,
                 'content': entity,
@@ -34,9 +36,9 @@ class EntityMemory:
             self.payload.append((identity, message_vector, metadata))
 
     def upsert_to_db(self):
-        entities = self.memory.entity_store
-        self.prepare_and_add(entities.__dict__)
-        e.index.upsert(self.payload, 'ENTITY')
+        entities = self.memory.entity_store.get_all()
+        self.prepare_and_add(entities)
+        e.index.upsert(self.payload, 'ENTITY-2')
 
 
 

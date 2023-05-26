@@ -16,7 +16,7 @@ class SearchUserPastMessages(BaseTool):
         log_service.logs.append(['Agent', 'SearchUserPastMessages', query])
         index_user_history = e.index.query(namespace='USER',
                                            vector=common.gpt_embedding(query),
-                                           top_k=100,
+                                           top_k=20,
                                            include_values=False,
                                            include_metadata=True)
         response = process_index.process_user_messages(index_user_history, query)
@@ -40,7 +40,7 @@ class SearchChatbotPastMessages(BaseTool):
         log_service.logs.append(['Agent', 'SearchChatbotPastMessages', query])
         index_agent_history = e.index.query(namespace='AGENT',
                                             vector=common.gpt_embedding(query),
-                                            top_k=100,
+                                            top_k=20,
                                             include_values=False,
                                             include_metadata=True)
         response = process_index.process_agent_messages(index_agent_history, query)
@@ -52,6 +52,26 @@ class SearchChatbotPastMessages(BaseTool):
         raise NotImplementedError("SearchChatbotDatabase does not support async")
 
 
+class SearchBatchMemory(BaseTool):
+    name = "SearchMemory"
+    description = "Pass a question to find out what is saved in memories."
+
+    def _run(self, query: str) -> str:
+        log_service.logs.append(['Agent', 'SearchBatchMemory', query])
+        index_agent_history = e.index.query(namespace='BATCH',
+                                            vector=common.gpt_embedding(query),
+                                            top_k=10,
+                                            include_values=False,
+                                            include_metadata=True)
+        response = process_index.process_batch_messages(index_agent_history, query)
+        log_service.logs.append(['Agent', 'SearchBatchMemoryResponse', response])
+        return response
+
+    async def _arun(self, query: str) -> str:
+        """Use the tool asynchronously."""
+        raise NotImplementedError("SearchBatchMemory does not support async")
+
+
 class SearchSummaryMemory(BaseTool):
     name = "SearchMemory"
     description = "Pass a question to find out what is saved in memories."
@@ -60,7 +80,7 @@ class SearchSummaryMemory(BaseTool):
         log_service.logs.append(['Agent', 'SearchSummaryMemory', query])
         index_summaries = e.index.query(namespace='SUMMARY',
                                         vector=common.gpt_embedding(query),
-                                        top_k=100,
+                                        top_k=2,
                                         include_values=False,
                                         include_metadata=True)
         response = process_index.process_summaries(index_summaries, query)
@@ -78,12 +98,12 @@ class SearchEntityMemory(BaseTool):
 
     def _run(self, query: str) -> str:
         log_service.logs.append(['Agent', 'SearchEntityMemory', query])
-        index_entities = e.index.query(namespace='ENTITY',
+        index_entities = e.index.query(namespace='ENTITY-2',
                                        vector=common.gpt_embedding(query),
-                                       top_k=100,
+                                       top_k=5,
                                        include_values=False,
                                        include_metadata=True)
-        response = process_index.process_summaries(index_entities, query)
+        response = process_index.process_entities(index_entities, query)
         log_service.logs.append(['Agent', 'SearchEntityMemoryResponse', response])
         return response
 

@@ -78,6 +78,21 @@ def get_contents_as_string(batch):
     return '\n'.join(contents)
 
 
+def get_contents_as_string_for_batch(batch):
+    timestamp = None
+    for b in batch:
+        timestamp = b['timestamp']
+        break
+    date_time = datetime.datetime.fromtimestamp(int(timestamp))
+    contents = "First message sent on: %s\n" % date_time
+    for b in batch:
+        role = b['role']
+        content = b['content']
+        contents += f"{role}: {content}\n"
+
+    return contents
+
+
 def process_user_messages(history, query):
     system_prompt = common.open_file('batching-prompt-configs/batching_system_config__user').replace('<<QUERY>>', query)
     user_prompt = common.open_file('batching-prompt-configs/batching_prompt_config')
@@ -88,6 +103,12 @@ def process_agent_messages(history, query):
     system_prompt = common.open_file('batching-prompt-configs/batching_system_config__agent').replace('<<QUERY>>', query)
     user_prompt = common.open_file('batching-prompt-configs/batching_prompt_config')
     return process_history(history, system_prompt, user_prompt)
+
+
+def process_batch_messages(batches, query):
+    system_prompt = common.open_file('batching-prompt-configs/batch_batching_system_config').replace('<<QUERY>>', query)
+    user_prompt = common.open_file('batching-prompt-configs/batch_batching_prompt_config')
+    return process_history(batches, system_prompt, user_prompt)
 
 
 def process_summaries(summaries, query):
@@ -108,21 +129,27 @@ def process_graphs(history, query):
     return process_history(history, system_prompt, user_prompt)
 
 
-def process_history(history, system_prompt, user_prompt):
+def process_history(history, system_prompt, user_prompt, is_batch=False):
     if not history['matches']:
         return "Past conversations do not contain relevant information"
 
     result = []
     metadata = [m['metadata'] for m in history['matches']]
     duplicates_removed = remove_duplicates(metadata)
-    batches = split_array(duplicates_removed)
+    sorted_by_time = sorted(duplicates_removed, key=lambda x: int(x['timestamp']))
+    batches = split_array(sorted_by_time)
     system_message = {
         "role": "system",
         "content": system_prompt
     }
 
     for b in batches:
-        batch_prompt = user_prompt.replace('<<HISTORY>>', get_contents_as_string(b))
+        if not is_batch:
+            content = get_contents_as_string(b)
+        else:
+            content = get_contents_as_string_for_batch(b)
+
+        batch_prompt = user_prompt.replace('<<HISTORY>>', content)
         user_message = {
             "role": 'user',
             "content": batch_prompt
