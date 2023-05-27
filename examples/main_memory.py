@@ -4,11 +4,11 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import ConversationChain
 from langchain.chains.conversation.memory import ConversationBufferMemory
 
-pinecone.init(api_key="a433ce32-e7cb-4684-9280-1d201daccc85", environment="eu-west1-gcp")
+pinecone.init(api_key="", environment="")
 # index = pinecone.Index("virtual-agent-v0") NOTNOW_TODO: new index
 llm = ChatOpenAI(
     temperature=0,
-    openai_api_key="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",
+    openai_api_key="",
     model_name="gpt-3.5-turbo"
 )
 
