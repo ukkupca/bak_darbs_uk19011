@@ -1,7 +1,7 @@
 import openai
 import tiktoken
 
-openai.api_key = "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"
+openai.api_key = ""
 
 
 def count_tokens(text):
