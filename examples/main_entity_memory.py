@@ -15,7 +15,7 @@ from langchain.prompts import PromptTemplate
 
 llm = ChatOpenAI(
     temperature=0,
-    openai_api_key="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",
+    openai_api_key="",
     model_name="gpt-3.5-turbo"
 )
 
